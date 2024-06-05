@@ -28,11 +28,12 @@ for (var i = 1; i <= mapSize; i++) {
         tiles.push(tile(i, j));
     }
 }
-var snakePart = [], snakeImg = []; // the snake is here
+var snakePart = [], snakeImg = [], snakeCoords = []; // the snake is here
 snakeLength = 0;
 function snake(x, y) {  // the snake properties
     this.x = x;
     this.y = y;
+    this.partNum = snakeLength;
     snakeLength++;
     snakeImg[snakeLength - 1] = document.createElement('div');
     map.appendChild(snakeImg[snakeLength - 1]);
@@ -44,12 +45,14 @@ function snake(x, y) {  // the snake properties
     snakeImg[snakeLength - 1].style.top = (this.y - 1) * tileSize + 'px';
     snakeImg[snakeLength - 1].style.left = (this.x - 1) * tileSize + 'px';
     snakeImg[snakeLength - 1].style.display = 'none';
-    appleCoords.splice(appleCoords.indexOf([this.x, this.y]), 1);
+    this.updateCoords = function() {
+        snakeCoords[this.partNum] = [this.x, this.y];
+    }
 }
 var appleImg, appleCoords = []; // create apple
 for (var i = 1; i <= mapSize; i++) {
     for (var j = 1; j <= mapSize; j++) {
-        appleCoords.push([j, i]);
+        appleCoords.push([i, j]);
     }
 }
 function Apple(x, y) {
@@ -69,13 +72,19 @@ snakePart.push(new snake((mapSize + 1) / 2, (mapSize + 1) / 2)); // the snake he
 snakeImg[0].style.display = 'block';
 snakeImg[0].style.backgroundColor = 'black';
 var apple = new Apple(appleCoords[Math.floor(Math.random() * (appleCoords.length))][0], appleCoords[Math.floor(Math.random() * (appleCoords.length))][1]);
-console.log(apple.x, apple.y);
-var keyOn;
+var keyOn, prevKey;
+Array.prototype.indexOfArray = function(val) { // find elements in an array
+    var hash = {};
+    for (var i = 0; i < this.length; i++) {
+      hash[this[i]] = i;
+    }
+    return (hash.hasOwnProperty(val)) ? hash[val] : -1;
+  };
 document.addEventListener('keydown', function(keyPressed) { // event listener
-    if (keyOn === undefined) {
+    if (prevKey === undefined) {
         keyOn = keyPressed.key;
     }
-    switch(keyOn){
+    switch(prevKey){
         case 'w':
             if (keyPressed.key !== 's') {
                 keyOn = keyPressed.key;
@@ -100,14 +109,18 @@ document.addEventListener('keydown', function(keyPressed) { // event listener
 })
 var speed = 7; // moving the snake
 function move() {
+    if (appleCoords.indexOfArray([snakePart[snakeLength - 1].x, snakePart[snakeLength - 1].y]) === -1) {
+        appleCoords.push([snakePart[snakeLength - 1].x, snakePart[snakeLength - 1].y]);
+    }
     for (var i = snakeLength - 1; i > 0; i--) {
         snakeImg[i].style.display = 'block';
         snakePart[i].x = snakePart[i - 1].x;
         snakePart[i].y = snakePart[i - 1].y;
         snakeImg[i].style.top = (snakePart[i].y - 1) * tileSize + 'px';
         snakeImg[i].style.left = (snakePart[i].x - 1) * tileSize + 'px';
+        snakePart[i].updateCoords();
     }
-    console.log(snakePart);
+    prevKey = keyOn;
     if (keyOn === 'w') {
         snakePart[0].y--;
         if (snakePart[0].y === 0) {
@@ -134,10 +147,12 @@ function move() {
     }
     snakeImg[0].style.top = (snakePart[0].y - 1) * tileSize + 'px';
     snakeImg[0].style.left = (snakePart[0].x - 1) * tileSize + 'px';
-    if (appleCoords.indexOf([snakePart[0].x, snakePart[0].y]) > -1) {
-        appleCoords.splice(appleCoords.indexOf([snakePart[0].x, snakePart[0].y]), 1);
+    if (snakeCoords.indexOfArray([snakePart[0].x, snakePart[0].y]) !== -1) {
+        clearInterval(game);
     }
-    appleCoords.push([snakePart[snakeLength - 1].x, snakePart[snakeLength - 1].y]);
+    if (appleCoords.indexOfArray([snakePart[0].x, snakePart[0].y]) !== -1) {
+        appleCoords.splice(appleCoords.indexOfArray([snakePart[0].x, snakePart[0].y]), 1);
+    }
     if (snakePart[0].x === apple.x && snakePart[0].y === apple.y) {
         snakePart.push(new snake(apple.x, apple.y));
         apple.x = appleCoords[Math.floor(Math.random() * (appleCoords.length))][0];
@@ -146,4 +161,4 @@ function move() {
         appleImg.style.left = (apple.x - 1) * tileSize + 'px';
     }
 }
-setInterval(move, 1000 / speed);
+var game = setInterval(move, 1000 / speed);
